@@ -88,17 +88,21 @@ get_files_from_commit(){
         # The normal line should be DOCKER_IMAGE_NAME/DOCKER_IMAGE_VERSION/filename
         # The count of '/' should be >= 2
         slash_count=$(echo ${current_line} | grep -o '/' | wc -l)
+		blank_count=$(echo ${current_line} | grep -o ' ' | wc -l)
         if ((slash_count<2)); then
-           echo "INFORMATION - This file doesn't related with any Docker."
-        else 
+            echo "INFORMATION - This file doesn't related with any Docker."
+        elif ((blank_count>0)); then
+            echo " ERROR - INFORMATION - Blank should not be exist with images name and version!"
+			exit -1
+        else			
             current_docker_image_name=${current_line%%/*}
             current_docker_image_version=${current_line#*/}
-            current_docker_image_version=${current_docker_image_version%%/*}
+            current_docker_image_version=${current_docker_image_version%%/*}			
             if [[ "$current_docker_image_name" != "$last_docker_image_name" || "$current_docker_image_version" != "$last_docker_image_version" ]]; then
                 docker_count=`expr $docker_count + 1`                
                 docker_image_name[$docker_count]=$current_docker_image_name
-                docker_image_version[$docker_count]=$current_docker_image_version
-                last_docker_image_name=$current_docker_image_name
+				docker_image_version[$docker_count]=$current_docker_image_version
+				last_docker_image_name=$current_docker_image_name
                 last_docker_image_version=$current_docker_image_version                 
            fi 
         fi
@@ -108,17 +112,21 @@ get_files_from_commit(){
 
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     commit_sha=$TRAVIS_COMMIT
+#    TRAVIS_REPO_SLUG=leonzhang77/docker-group
+#    commit_sha=3d329d3b3814f313bc9cdd923dbb72d9b560850e
     get_files_from_commit
 fi
 
 dockers=$docker_count
-if [[ $dockers==0 ]]; then
+echo "dockers: "${dockers}
+if [[ "${dockers}" == "0" ]]; then
     echo "This time, doesn't change any files related with docker, no need to verify."
     exit 0;
 fi
 
 echo "======================================================================================"
 echo "INFORMATION - This time, we need to verify below dockers:"
+docker_count=1
 while (( $docker_count<=$dockers))
 do       
     ./travis-script/test.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}        
