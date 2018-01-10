@@ -59,13 +59,13 @@ echo "TRAVIS_TEST_RESULT: $TRAVIS_TEST_RESULT"
 echo "TRAVIS_TAG: $TRAVIS_TAG"
 
 TRAVIS_EVENT_TYPE="push"
-commit_sha="a092554bd04132c258f78f94d5811a9cbad2040c"
+commit_sha=""
 DOCKER_IMAGE_NAME=""
 DOCKER_IMAGE_VERSION=""
+docker_count=0
 
-if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
-    #changed_files = curl https://api.github.com/repos/"${TRAVIS_REPO_SLUG}"/pulls/"${TRAVIS_PULL_REQUEST}" | grep '"filenames":'
-    curl https://api.github.com/repos/leonzhang77/docker-group/commits/"$commit_sha" | grep '"filename":' > commit_files.txt
+get_files_from_commit(){
+    curl https://api.github.com/repos/"${TRAVIS_REPO_SLUG}"/commits/"$commit_sha" | grep '"filename":' > commit_files.txt
     sed -i 's/'\"filename\":'/''/g' commit_files.txt
     sed -i 's/'\"'/''/g' commit_files.txt
     sed -i 's/','/''/g' commit_files.txt
@@ -73,7 +73,7 @@ if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     echo "====================================================================================="
     echo "Below files are changed:"
     cat commit_files.txt
-    docker_count=0
+    
     last_docker_image_name="nothing"
     last_docker_image_version="nothing"
     line_count=1
@@ -104,14 +104,37 @@ if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
         fi
 	    line_count=`expr $line_count + 1`
     done
-    
-    dockers=$docker_count
-    docker_count=1
-    while (( $docker_count<=$dockers))
-    do        
-        ./travis-script/test.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
-	docker_count=`expr $docker_count + 1`
-    done
+}
+
+if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
+    commit_sha=$TRAVIS_COMMIT
+    get_files_from_commit
 fi
 
+dockers=$docker_count
+if [[ $dockers==0 ]]; then
+    echo "This time, doesn't change any files related with docker, no need to verify."
+    exit 0;
+fi
+
+echo "======================================================================================"
+echo "INFORMATION - This time, we need to verify below dockers:"
+while (( $docker_count<=$dockers))
+do       
+    ./travis-script/test.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}        
+    docker_count=`expr $docker_count + 1`
+done
+    
+# Verify Docker files.
+docker_count=1
+while (( $docker_count<=$dockers))
+do       
+    #./travis-script/test.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+    ./travis-script/test-dockerfile.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+    docker_count=`expr $docker_count + 1`
+done
+
+
+# Everything is OK, return 0
+exit 0
 
