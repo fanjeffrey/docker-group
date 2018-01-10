@@ -58,4 +58,60 @@ echo "TRAVIS_TEST_RESULT: $TRAVIS_TEST_RESULT"
 # TRAVIS_TAG: If the current build is for a git tag, this variable is set to the tag’s name.
 echo "TRAVIS_TAG: $TRAVIS_TAG"
 
-./travis-script/test.sh hello world
+TRAVIS_EVENT_TYPE="push"
+commit_sha="a092554bd04132c258f78f94d5811a9cbad2040c"
+DOCKER_IMAGE_NAME=""
+DOCKER_IMAGE_VERSION=""
+
+if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
+    #changed_files = curl https://api.github.com/repos/"${TRAVIS_REPO_SLUG}"/pulls/"${TRAVIS_PULL_REQUEST}" | grep '"filenames":'
+    curl https://api.github.com/repos/leonzhang77/docker-group/commits/"$commit_sha" | grep '"filename":' > commit_files.txt
+    sed -i 's/'\"filename\":'/''/g' commit_files.txt
+    sed -i 's/'\"'/''/g' commit_files.txt
+    sed -i 's/','/''/g' commit_files.txt
+    sed -i 's/' '/''/g' commit_files.txt
+    echo "====================================================================================="
+    echo "Below files are changed:"
+    cat commit_files.txt
+    docker_count=0
+    last_docker_image_name="nothing"
+    last_docker_image_version="nothing"
+    line_count=1
+    lines=$(wc -l commit_files.txt)
+    lines=${lines%%' '*}
+    echo "Total lines: "${lines}
+    while (( $line_count<=$lines )) 
+    do
+	    echo "Deal with "$line_count" line:"
+        current_line=$(sed -n "${line_count}p" commit_files.txt)
+        echo "Current line: "${current_line}
+        # The normal line should be DOCKER_IMAGE_NAME/DOCKER_IMAGE_VERSION/filename
+        # The count of '/' should be >= 2
+        slash_count=$(echo ${current_line} | grep -o '/' | wc -l)
+        if ((slash_count<2)); then
+           echo "INFORMATION - This file doesn't related with any Docker."
+        else 
+            current_docker_image_name=${current_line%%/*}
+            current_docker_image_version=${current_line#*/}
+            current_docker_image_version=${current_docker_image_version%%/*}
+            if [[ "$current_docker_image_name" != "$last_docker_image_name" || "$current_docker_image_version" != "$last_docker_image_version" ]]; then
+                docker_count=`expr $docker_count + 1`                
+                docker_image_name[$docker_count]=$current_docker_image_name
+                docker_image_version[$docker_count]=$current_docker_image_version
+                last_docker_image_name=$current_docker_image_name
+                last_docker_image_version=$current_docker_image_version                 
+           fi 
+        fi
+	    line_count=`expr $line_count + 1`
+    done
+    
+    dockers=$docker_count
+    docker_count=1
+    while (( $docker_count<=$dockers))
+    do        
+        ./travis-script/test.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+	docker_count=`expr $docker_count + 1`
+    done
+fi
+
+
