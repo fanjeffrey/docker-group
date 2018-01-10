@@ -87,13 +87,9 @@ get_files_from_commit(){
         echo "Current line: "${current_line}
         # The normal line should be DOCKER_IMAGE_NAME/DOCKER_IMAGE_VERSION/filename
         # The count of '/' should be >= 2
-        slash_count=$(echo ${current_line} | grep -o '/' | wc -l)
-		blank_count=$(echo ${current_line} | grep -o ' ' | wc -l)
+        slash_count=$(echo ${current_line} | grep -o '/' | wc -l)		
         if ((slash_count<2)); then
-            echo "INFORMATION - This file doesn't related with any Docker."
-        elif ((blank_count>0)); then
-            echo " ERROR - INFORMATION - Blank should not be exist with images name and version!"
-			exit -1
+            echo "INFORMATION - This file doesn't related with any Docker."        
         else			
             current_docker_image_name=${current_line%%/*}
             current_docker_image_version=${current_line#*/}
@@ -108,12 +104,13 @@ get_files_from_commit(){
         fi
 	    line_count=`expr $line_count + 1`
     done
+	rm commit_files.txt
 }
 
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     commit_sha=$TRAVIS_COMMIT
 #    TRAVIS_REPO_SLUG=leonzhang77/docker-group
-#    commit_sha=3d329d3b3814f313bc9cdd923dbb72d9b560850e
+#    commit_sha=d6cf2b5859abd88dde0ef5694dd2d9cbbbffd938
     get_files_from_commit
 fi
 
@@ -126,19 +123,42 @@ fi
 
 echo "======================================================================================"
 echo "INFORMATION - This time, we need to verify below dockers:"
+echo " "
+echo " "
 docker_count=1
 while (( $docker_count<=$dockers))
 do       
-    ./travis-script/test.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}        
+    echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}       
     docker_count=`expr $docker_count + 1`
 done
-    
+echo " "
+echo " "
+
+echo "======================================================================================"
+echo "INFORMATION - Start to Verify Dockers:"
 # Verify Docker files.
 docker_count=1
 while (( $docker_count<=$dockers))
-do       
-    #./travis-script/test.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
-    ./travis-script/test-dockerfile.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+do     
+	docker_folder=${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
+	echo "folder: "$docker_folder
+	blank_count=0
+    blank_count=$(echo ${docker_folder} | grep -o ' ' | wc -l)    
+    if ((blank_count>0)); then
+        echo "ERROR - blank char should not be include in folder name!"
+        exit -1
+    fi
+	#Is this commit remove a Image/Version? If yes, we can skip this step.
+    if test ! -d $docker_folder; then
+        echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !"
+    else      
+        ./travis-script/test-dockerfile.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+		test_result=$?		
+		if ((test_result!=0)); then
+			echo "ERROR - Please double check......"
+			exit -1
+		fi
+    fi
     docker_count=`expr $docker_count + 1`
 done
 
