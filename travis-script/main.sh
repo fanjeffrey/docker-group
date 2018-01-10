@@ -141,17 +141,17 @@ docker_count=1
 while (( $docker_count<=$dockers))
 do     
 	docker_folder=${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
-	echo "folder: "$docker_folder
-	blank_count=0
-    blank_count=$(echo ${docker_folder} | grep -o ' ' | wc -l)    
-    if ((blank_count>0)); then
-        echo "ERROR - blank char should not be include in folder name!"
-        exit -1
-    fi
+	echo "folder: "$docker_folder	
 	#Is this commit remove a Image/Version? If yes, we can skip this step.
     if test ! -d $docker_folder; then
         echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !"
-    else      
+    else
+        blank_count=0
+        blank_count=$(echo ${docker_folder} | grep -o ' ' | wc -l)    
+        if ((blank_count>0)); then
+            echo "ERROR - blank char should not be include in folder name!"
+            exit -1
+        fi
         ./travis-script/test-dockerfile.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
 		test_result=$?		
 		if ((test_result!=0)); then
@@ -161,6 +161,30 @@ do
     fi
     docker_count=`expr $docker_count + 1`
 done
+
+echo " "
+echo " "
+echo "======================================================================================"
+echo "INFORMATION - Start to Verify Dockers:"
+# Verify Docker files.
+docker_count=1
+while (( $docker_count<=$dockers))
+    docker_folder=${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
+	echo "folder: "$docker_folder    
+    #Is this commit remove a Image/Version? If yes, we can skip this step.
+    if test ! -d $docker_folder; then
+        echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !"
+    else      
+        #It's not necessay to verify folder here, if anything wrong, the process should has been broken in last stage.
+        ./travis-script/test-build-push.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+		test_result=$?		
+		if ((test_result!=0)); then
+			echo "ERROR - Please double check......"
+			exit -1
+		fi
+    fi
+    docker_count=`expr $docker_count + 1`
+do     
 
 
 # Everything is OK, return 0

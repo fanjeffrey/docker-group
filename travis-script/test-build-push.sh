@@ -1,4 +1,5 @@
 DOCKER_IMAGE_NAME=$1
+DOCKER_IMAGE_VERSION=$2
 
 # If script run to error, exist -1;
 function _do() 
@@ -8,7 +9,10 @@ function _do()
 
 build_image(){
     echo "${DOCKER_PASSWORD}" | _do docker login -u="${DOCKER_USERNAME}" --password-stdin
+    _do cd ${DOCKER_IMAGE_NAME}"/"${DOCKER_IMAGE_VERSION}
     _do docker build -t "${DOCKER_IMAGE_NAME}" .
+    -do cd ..
+    -do cd ..
     testBuildImage=$(docker images | grep "${DOCKER_IMAGE_NAME}")
     if [ -z "${testBuildImage}" ]; then 
         echo "FAILED - Build fail!!!"
@@ -40,12 +44,6 @@ setTag_push_rm(){
     _do docker images
 }
 
-echo "================================================="
-echo "Stage1 - Verify Dockerfile"
-echo "INFORMATION: Start to Verifiy Dockerfile......"
-test_Dockerfile
-echo "================================================="
-
 echo "Stage2 - Build Image"
 echo "INFORMATION: Start to Build......"
 build_image
@@ -60,25 +58,25 @@ pushed="false"
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     echo "INFORMATION: This is a PUSH/MERGE......"
     MegerPull="Merge pull"
-    Version="Version:"    
+    SignOff="#sign-off"
     # get the line which contains "Version" form commit message.
-    version=$(echo "${TRAVIS_COMMIT_MESSAGE}" | grep "Version") 
-    if [ -n "${version}" ]; then
-            echo "INFORMATION: Commit Message contains version......"
+    signoff=$(echo "${TRAVIS_COMMIT_MESSAGE}" | grep "${SignOff}") 
+    if [ -n "${signoff}" ]; then
+            echo "INFORMATION: Commit Message contains #Signoff......"
             # remove left chars since ":"
-            TAG=${version##*:}
-            echo "INFORMATION: Set TAG as ""${version##*:}"" and push......" 
+            TAG=${DOCKER_IMAGE_VERSION}
+            echo "INFORMATION: Set TAG as ""${TAG}"" and push......" 
             setTag_push_rm
             pushed="true"
     fi 
     # commit message start with "Merge pull"
-    if [[ ${TRAVIS_COMMIT_MESSAGE} == $MegerPull* ]]; then
-        echo "INFORMATION: Commit Message contains Merge pull......"
-        TAG="latest"
-        echo "INFORMATION: Set TAG as latest and push......"
-        setTag_push_rm
-        pushed="true"       
-    fi    
+    # if [[ ${TRAVIS_COMMIT_MESSAGE} == $MegerPull* ]]; then
+    #    echo "INFORMATION: Commit Message contains Merge pull......"
+    #    TAG="latest"
+    #    echo "INFORMATION: Set TAG as latest and push......"
+    #    setTag_push_rm
+    #    pushed="true"       
+    # fi    
 else
     if [ "$TRAVIS_EVENT_TYPE" == "pull_request" ]; then
         # this is a PR.
@@ -113,7 +111,7 @@ else
 fi
 if [ "${pushed}" == "false" ]; then
         TAG="${TRAVIS_BUILD_NUMBER}"
-        echo "INFORMATION: Set TAG as ""${TRAVIS_BUILD_NUMBER}""and push......"
+        echo "INFORMATION: Set TAG as ""${TAG}""and push......"
         setTag_push_rm
 fi
 
