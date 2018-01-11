@@ -78,7 +78,7 @@ if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     # fi           
 fi
 if [ "${pushed}" == "false" ]; then
-        TAG="${TRAVIS_BUILD_NUMBER}"
+        TAG=${DOCKER_IMAGE_VERSION}"-"${TRAVIS_BUILD_NUMBER}
         echo "INFORMATION: Set TAG as ""${TAG}""and push......"
         setTag_push_rm
 fi
