@@ -3,6 +3,7 @@ dist: trusty
 before_install:
      - chmod +x ./travis-script/main.sh
      - chmod +x ./travis-script/test-dockerfile.sh
+     - chmod +x ./travis-script/test-build-push.sh
 jobs:
   include:
     - stage: check Dockerfile

@@ -58,10 +58,7 @@ echo "TRAVIS_TEST_RESULT: $TRAVIS_TEST_RESULT"
 # TRAVIS_TAG: If the current build is for a git tag, this variable is set to the tag’s name.
 echo "TRAVIS_TAG: $TRAVIS_TAG"
 
-TRAVIS_EVENT_TYPE="push"
-commit_sha=""
-DOCKER_IMAGE_NAME=""
-DOCKER_IMAGE_VERSION=""
+
 docker_count=0
 
 show_docker_list(){
@@ -188,10 +185,10 @@ get_files_from_commit(){
 }
 
 #Test ENV: 
-TRAVIS_REPO_SLUG=leonzhang77/docker-group
-TRAVIS_COMMIT=d6cf2b5859abd88dde0ef5694dd2d9cbbbffd938
-TRAVIS_PULL_REQUEST=1
-TRAVIS_EVENT_TYPE=pull_request
+#TRAVIS_REPO_SLUG=leonzhang77/docker-group
+#TRAVIS_COMMIT=d6cf2b5859abd88dde0ef5694dd2d9cbbbffd938
+#TRAVIS_PULL_REQUEST=1
+#TRAVIS_EVENT_TYPE=pull_request
 #
 # 
 echo "========================================================================================"
@@ -269,7 +266,8 @@ echo "==========================================================================
 echo "INFORMATION - Start to Build/PUSH:"
 # Verify Docker files.
 docker_count=1
-while [ $docker_count -le $dockers ]
+while test $[docker_count] -le $[dockers]
+do
     docker_folder=${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
 	echo "folder: "$docker_folder    
     #Is this commit remove a Image/Version? If yes, we can skip this step.
@@ -278,7 +276,7 @@ while [ $docker_count -le $dockers ]
         echo "INFORMATION: SKIP this stage"
     else      
         #It's not necessay to verify folder here, if anything wrong, the process should has been broken in last stage.
-#        ./travis-script/test-build-push.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+        ./travis-script/test-build-push.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
 		test_result=$?		
 		if ((test_result!=0)); then
 			echo "ERROR - Please double check......"
@@ -286,7 +284,9 @@ while [ $docker_count -le $dockers ]
 		fi
     fi
     let docker_count+=1
-do     
+done     
 
 # Everything is OK, return 0
+echo "========================================================================================="
+echo "Everything is OK, return 0"
 exit 0

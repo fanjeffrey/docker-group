@@ -58,8 +58,7 @@ pushed="false"
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     echo "INFORMATION: This is a PUSH/MERGE......"
     MegerPull="Merge pull"
-    SignOff="#sign-off"
-    # get the line which contains "Version" form commit message.
+    SignOff="#sign-off"    
     signoff=$(echo "${TRAVIS_COMMIT_MESSAGE}" | grep "${SignOff}") 
     if [ -n "${signoff}" ]; then
             echo "INFORMATION: Commit Message contains #Signoff......"
@@ -76,38 +75,7 @@ if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     #    echo "INFORMATION: Set TAG as latest and push......"
     #    setTag_push_rm
     #    pushed="true"       
-    # fi    
-else
-    if [ "$TRAVIS_EVENT_TYPE" == "pull_request" ]; then
-        # this is a PR.
-	    echo "INFORMATION: This is a PULL REQUEST......"
-        SignOff="#sign-off"
-        PR_TITLE=$(curl https://api.github.com/repos/"${TRAVIS_REPO_SLUG}"/pulls/"${TRAVIS_PULL_REQUEST}" | grep '"title":')
-        echo "PR_TITLE:""${PR_TITLE}"
-        signoff=$(echo "${PR_TITLE}" | grep "${SignOff}")  
-	    
-        # if commit message of this PR contains "#sign-off", set tag as latest, push.
-        if [ -n "${signoff}" ]; then
-            echo "INFORMATION: PR Title contains #sign-off......"
-            # get clear content. Prepare to compare with SignOff
-            signoff=${signoff##*' '}     
-            signoff=${signoff//'"'/''}
-            signoff=${signoff//','/''}
-            TAG="latest"
-	        echo "INFORMATION: Set TAG as latest and push......"
-            setTag_push_rm
-            pushed="true"
-        fi
-        # if commit message of this PR contains version tag, set tag and push.
-        if [ "$signoff" != "$SignOff" ]; then  
-            echo "INFORMATION: PR Title contains #sign-off and version......"  
-            TAG=${signoff#*:}
-            echo "INFORMATION: Set TAG as ""${signoff#*:}"" and push......"
-            setTag_push_rm
-            pushed="true" 
-        fi
-    fi
-        
+    # fi           
 fi
 if [ "${pushed}" == "false" ]; then
         TAG="${TRAVIS_BUILD_NUMBER}"
@@ -134,6 +102,3 @@ testBuildImage=$(docker images | grep "${TAG}")
     fi
 echo "================================================="
 
-
-# Everything is OK, return 0
-exit 0
