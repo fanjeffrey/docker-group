@@ -67,18 +67,10 @@ if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
             echo "INFORMATION: Set TAG as ""${TAG}"" and push......" 
             setTag_push_rm
             pushed="true"
-    fi 
-    # commit message start with "Merge pull"
-    # if [[ ${TRAVIS_COMMIT_MESSAGE} == $MegerPull* ]]; then
-    #    echo "INFORMATION: Commit Message contains Merge pull......"
-    #    TAG="latest"
-    #    echo "INFORMATION: Set TAG as latest and push......"
-    #    setTag_push_rm
-    #    pushed="true"       
-    # fi           
+    fi    
 fi
 if [ "${pushed}" == "false" ]; then
-        TAG="${TRAVIS_BUILD_NUMBER}"
+        TAG=${DOCKER_IMAGE_VERSION}"-"${TRAVIS_BUILD_NUMBER}
         echo "INFORMATION: Set TAG as ""${TAG}""and push......"
         setTag_push_rm
 fi
@@ -88,7 +80,7 @@ echo "Stage4 - PULL and Verify"
 echo "INFORMATION: Start to Pull ""${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}"
 echo "INFORMATION: Before Pull - docker images"
 _do docker images
-_do docker run -d --rm -p 80:80 $DOCKER_USERNAME/${DOCKER_IMAGE_NAME}:"$TAG"
+_do docker run -d -p 80:80 --name testdocker $DOCKER_USERNAME/${DOCKER_IMAGE_NAME}:"$TAG"
 echo "INFORMATION: After Pull - docker images"
 _do docker images
 testBuildImage=$(docker images | grep "${TAG}")
@@ -100,5 +92,8 @@ testBuildImage=$(docker images | grep "${TAG}")
         echo "$testBuildImage"
         echo "PASSED - Docker image pull and run Successfully!. You can manually verify it!"
     fi
+_do docker stop testdocker
+_do docker rm testdocker
+_do docker rmi ${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}
 echo "================================================="
 
