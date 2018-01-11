@@ -92,6 +92,6 @@ testBuildImage=$(docker images | grep "${TAG}")
         echo "$testBuildImage"
         echo "PASSED - Docker image pull and run Successfully!. You can manually verify it!"
     fi
-_do docker stop ""${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}"
+_do docker stop ${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}
 echo "================================================="
 
