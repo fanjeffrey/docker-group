@@ -64,6 +64,56 @@ DOCKER_IMAGE_NAME=""
 DOCKER_IMAGE_VERSION=""
 docker_count=0
 
+show_docker_list(){
+    echo ""
+    echo ""
+    echo "======================================================================================"
+    echo "INFORMATION - This time, we need to verify below dockers:"
+    echo " "
+    echo " "
+    docker_count=1
+    while test $[docker_count] -le $[dockers]
+    do       
+        echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}       
+        let docker_count+=1
+    done
+}
+
+merge_to_docker_list(){
+    if test $[docker_count] -eq 0;then
+	    echo "START TO MERGE"
+        #This is first Group, just add.
+        temp_docker_count=0
+        while test $[temp_docker_count] -lt $[temp_dockers]
+        do
+            let temp_docker_count+=1
+            let docker_count+=1                
+            docker_image_name[$docker_count]=${temp_docker_image_name[${temp_docker_count}]}
+            docker_image_version[$docker_count]=${temp_docker_image_version[${temp_docker_count}]}
+        done
+    else
+        touch merge_docker_list.txt
+        docker_count=1        
+        while test $[docker_count] -le $[dockers]
+        do       
+            echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]} >> merge_docker_list.txt       
+            let docker_count+=1
+        done   
+        temp_docker_count=1
+        while test $[temp_docker_count] -le $[temp_dockers]
+        do       
+            echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]} >> merge_docker_list.txt       
+            let docker_count+=1
+        done
+        echo "merge_docker_list:"
+        cat merge_docker_list.txt
+        cat merge_docker_list.txt | sort -u > sort_unique_list.txt
+        echo "sort_list:"
+        cat sort_unique_list.txt
+    fi
+    dockers=${#docker_image_name[@]}
+}
+
 get_files_from_commit(){
     curl https://api.github.com/repos/"${TRAVIS_REPO_SLUG}"/commits/"$commit_sha" | grep '"filename":' > commit_files.txt
     sed -i 's/'\"filename\":'/''/g' commit_files.txt
@@ -80,7 +130,8 @@ get_files_from_commit(){
     lines=$(wc -l commit_files.txt)
     lines=${lines%%' '*}
     echo "Total lines: "${lines}
-    while (( $line_count<=$lines )) 
+    temp_docker_count=0
+    while [ $line_count -le $lines ] 
     do
 	    echo "Deal with "$line_count" line:"
         current_line=$(sed -n "${line_count}p" commit_files.txt)
@@ -88,105 +139,95 @@ get_files_from_commit(){
         # The normal line should be DOCKER_IMAGE_NAME/DOCKER_IMAGE_VERSION/filename
         # The count of '/' should be >= 2
         slash_count=$(echo ${current_line} | grep -o '/' | wc -l)		
-        if ((slash_count<2)); then
+        if [ $slash_count -lt 2 ]; then
             echo "INFORMATION - This file doesn't related with any Docker."        
         else			
             current_docker_image_name=${current_line%%/*}
             current_docker_image_version=${current_line#*/}
             current_docker_image_version=${current_docker_image_version%%/*}			
             if [[ "$current_docker_image_name" != "$last_docker_image_name" || "$current_docker_image_version" != "$last_docker_image_version" ]]; then
-                docker_count=`expr $docker_count + 1`                
-                docker_image_name[$docker_count]=$current_docker_image_name
-				docker_image_version[$docker_count]=$current_docker_image_version
+                let temp_docker_count+=1
+                temp_docker_image_name[$temp_docker_count]=$current_docker_image_name
+				temp_docker_image_version[$temp_docker_count]=$current_docker_image_version
 				last_docker_image_name=$current_docker_image_name
                 last_docker_image_version=$current_docker_image_version                 
            fi 
         fi
-	    line_count=`expr $line_count + 1`
+	    let line_count+=1
     done
+    temp_dockers=$temp_docker_count
 	rm commit_files.txt
 }
 
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
-    commit_sha=$TRAVIS_COMMIT
-#    TRAVIS_REPO_SLUG=leonzhang77/docker-group
-#    commit_sha=d6cf2b5859abd88dde0ef5694dd2d9cbbbffd938
+#    commit_sha=$TRAVIS_COMMIT
+    TRAVIS_REPO_SLUG=leonzhang77/docker-group
+    commit_sha=d6cf2b5859abd88dde0ef5694dd2d9cbbbffd938
     get_files_from_commit
+	merge_to_docker_list
 fi
 
-dockers=$docker_count
+
 echo "dockers: "${dockers}
-if [[ "${dockers}" == "0" ]]; then
+if test $[dockers] -eq 0; then
     echo "This time, doesn't change any files related with docker, no need to verify."
     exit 0;
 fi
 
+show_docker_list
 echo "======================================================================================"
-echo "INFORMATION - This time, we need to verify below dockers:"
-echo " "
-echo " "
-docker_count=1
-while (( $docker_count<=$dockers))
-do       
-    echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}       
-    docker_count=`expr $docker_count + 1`
-done
-echo " "
-echo " "
-
-echo "======================================================================================"
-echo "INFORMATION - Start to Verify Dockers:"
+echo "INFORMATION - Start to Verify Docker files:"
 # Verify Docker files.
 docker_count=1
-while (( $docker_count<=$dockers))
+while [ $docker_count -le $dockers ]
 do     
 	docker_folder=${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
-	echo "folder: "$docker_folder	
+	echo "PATH: "$docker_folder	
 	#Is this commit remove a Image/Version? If yes, we can skip this step.
     if test ! -d $docker_folder; then
         echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !"
+        echo "INFORMATION: SKIP this stage"
     else
         blank_count=0
         blank_count=$(echo ${docker_folder} | grep -o ' ' | wc -l)    
-        if ((blank_count>0)); then
+        if [ $blank_count -gt 0 ]; then
             echo "ERROR - blank char should not be include in folder name!"
+            echo "ERROR - PATH: "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
             exit -1
         fi
         ./travis-script/test-dockerfile.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
 		test_result=$?		
-		if ((test_result!=0)); then
+		if [ $test_result -ne 0 ]; then
 			echo "ERROR - Please double check......"
 			exit -1
 		fi
     fi
-    docker_count=`expr $docker_count + 1`
+    let docker_count+=1
 done
-
-echo " "
-echo " "
+echo ""
+echo ""
 echo "======================================================================================"
-echo "INFORMATION - Start to Verify Dockers:"
+echo "INFORMATION - Start to Build/PUSH:"
 # Verify Docker files.
 docker_count=1
-while (( $docker_count<=$dockers))
+while [ $docker_count -le $dockers ]
     docker_folder=${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
 	echo "folder: "$docker_folder    
     #Is this commit remove a Image/Version? If yes, we can skip this step.
     if test ! -d $docker_folder; then
         echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !"
+        echo "INFORMATION: SKIP this stage"
     else      
         #It's not necessay to verify folder here, if anything wrong, the process should has been broken in last stage.
-        ./travis-script/test-build-push.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
+#        ./travis-script/test-build-push.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
 		test_result=$?		
 		if ((test_result!=0)); then
 			echo "ERROR - Please double check......"
 			exit -1
 		fi
     fi
-    docker_count=`expr $docker_count + 1`
+    let docker_count+=1
 do     
-
 
 # Everything is OK, return 0
 exit 0
-
