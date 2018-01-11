@@ -80,8 +80,10 @@ show_docker_list(){
 }
 
 merge_to_docker_list(){
+    echo "======================================"
+    echo "INFORMATION - START TO MERGE"
     if test $[docker_count] -eq 0;then
-	    echo "START TO MERGE"
+	    echo "This is first group..."		
         #This is first Group, just add.
         temp_docker_count=0
         while test $[temp_docker_count] -lt $[temp_dockers]
@@ -91,7 +93,10 @@ merge_to_docker_list(){
             docker_image_name[$docker_count]=${temp_docker_image_name[${temp_docker_count}]}
             docker_image_version[$docker_count]=${temp_docker_image_version[${temp_docker_count}]}
         done
+		dockers=${#docker_image_name[@]}
     else
+	    echo "Already have some dockers exist in the list..."
+		echo "Already have docker count: "$docker_count
         touch merge_docker_list.txt
         docker_count=1        
         while test $[docker_count] -le $[dockers]
@@ -102,25 +107,48 @@ merge_to_docker_list(){
         temp_docker_count=1
         while test $[temp_docker_count] -le $[temp_dockers]
         do       
-            echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]} >> merge_docker_list.txt       
-            let docker_count+=1
+            echo ${temp_docker_image_name["${temp_docker_count}"]}"/"${temp_docker_image_version["${temp_docker_count}"]} >> merge_docker_list.txt       
+            let temp_docker_count+=1
         done
-        echo "merge_docker_list:"
-        cat merge_docker_list.txt
+        #echo "merge_docker_list:"
+        #cat merge_docker_list.txt
         cat merge_docker_list.txt | sort -u > sort_unique_list.txt
-        echo "sort_list:"
+		rm merge_docker_list.txt
+        echo "INFORMATION - sort_unique_docker_list:"
         cat sort_unique_list.txt
+		#put sort_unique_list.txt to docker_list
+		line_count_sort_list=1
+		lines_sort_list=$(wc -l sort_unique_list.txt)
+		lines_sort_list=${lines_sort_list%%' '*}
+		dockers=$lines_sort_list		
+		while test $[line_count_sort_list] -le $[lines_sort_list] 
+		do
+		    #echo "Deal with "$line_count_sort_list" line:"
+            current_line=$(sed -n "${line_count_sort_list}p" sort_unique_list.txt)
+			#echo "Current line: "${current_line}
+			docker_image_name[$line_count_sort_list]=${current_line%%/*}
+            docker_image_version[$line_count_sort_list]=${current_line##*/}
+		    let line_count_sort_list+=1			
+		done
+        rm sort_unique_list.txt		
     fi
-    dockers=${#docker_image_name[@]}
+	echo "INFORMATION - MERGED!"
+	echo "================================================================================="
+    
 }
 
 get_files_from_commit(){
+    echo "start to get commit files..."
     curl https://api.github.com/repos/"${TRAVIS_REPO_SLUG}"/commits/"$commit_sha" | grep '"filename":' > commit_files.txt
+	#echo "111"
     sed -i 's/'\"filename\":'/''/g' commit_files.txt
+	#echo "222"
     sed -i 's/'\"'/''/g' commit_files.txt
+	#echo "333"
     sed -i 's/','/''/g' commit_files.txt
-    sed -i 's/' '/''/g' commit_files.txt
-    echo "====================================================================================="
+	#echo "444"
+    sed -i 's/ //g' commit_files.txt
+    #echo "====================================================================================="
     echo "Below files are changed:"
     cat commit_files.txt
     
@@ -133,9 +161,9 @@ get_files_from_commit(){
     temp_docker_count=0
     while [ $line_count -le $lines ] 
     do
-	    echo "Deal with "$line_count" line:"
+	    #echo "Deal with "$line_count" line:"
         current_line=$(sed -n "${line_count}p" commit_files.txt)
-        echo "Current line: "${current_line}
+        #echo "Current line: "${current_line}
         # The normal line should be DOCKER_IMAGE_NAME/DOCKER_IMAGE_VERSION/filename
         # The count of '/' should be >= 2
         slash_count=$(echo ${current_line} | grep -o '/' | wc -l)		
@@ -156,17 +184,48 @@ get_files_from_commit(){
 	    let line_count+=1
     done
     temp_dockers=$temp_docker_count
-	rm commit_files.txt
+#	rm commit_files.txt
 }
 
+#Test ENV: 
+TRAVIS_REPO_SLUG=leonzhang77/docker-group
+TRAVIS_COMMIT=d6cf2b5859abd88dde0ef5694dd2d9cbbbffd938
+TRAVIS_PULL_REQUEST=1
+TRAVIS_EVENT_TYPE=pull_request
+#
+# 
+echo "========================================================================================"
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
-#    commit_sha=$TRAVIS_COMMIT
-    TRAVIS_REPO_SLUG=leonzhang77/docker-group
-    commit_sha=d6cf2b5859abd88dde0ef5694dd2d9cbbbffd938
+    echo "INFORMATION - This is a PR, Contains below Commits:"
+    echo $TRAVIS_COMMIT
+    commit_sha=$TRAVIS_COMMIT    
     get_files_from_commit
 	merge_to_docker_list
+else
+    curl https://api.github.com/repos/"${TRAVIS_REPO_SLUG}"/pulls/"${TRAVIS_PULL_REQUEST}"/commits | grep '\"sha\":' > TEMP.txt
+    sed -i 's/\"//g' TEMP.txt
+	sed -i 's/,//g' TEMP.txt
+	sed -i 's/://g' TEMP.txt
+    sed -i 's/      sha//g' TEMP.txt
+    cat TEMP.txt | grep sha > PR_SHAs.txt
+    rm TEMP.txt
+    echo "INFORMATION - This is a PR, Contains below Commits:"
+    cat PR_SHAs.txt
+    line_count_sha=1
+    lines_sha=$(wc -l PR_SHAs.txt)
+    lines_sha=${lines_sha%%' '*}
+    while [ $line_count_sha -le $lines_sha ] 
+    do
+        echo "Deal with line:"$line_count_sha
+        current_line=$(sed -n "${line_count_sha}p" PR_SHAs.txt)
+        #echo "Current line: "${current_line}        
+        commit_sha=${current_line##* }
+		echo "Current SHA: "$commit_sha
+        get_files_from_commit
+        merge_to_docker_list
+		let line_count_sha+=1
+    done
 fi
-
 
 echo "dockers: "${dockers}
 if test $[dockers] -eq 0; then
