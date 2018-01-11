@@ -80,7 +80,7 @@ echo "Stage4 - PULL and Verify"
 echo "INFORMATION: Start to Pull ""${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}"
 echo "INFORMATION: Before Pull - docker images"
 _do docker images
-_do docker run -d --rm -p 80:80 $DOCKER_USERNAME/${DOCKER_IMAGE_NAME}:"$TAG"
+_do docker run -d -p 80:80 $DOCKER_USERNAME/${DOCKER_IMAGE_NAME}:"$TAG"
 echo "INFORMATION: After Pull - docker images"
 _do docker images
 testBuildImage=$(docker images | grep "${TAG}")
@@ -93,5 +93,6 @@ testBuildImage=$(docker images | grep "${TAG}")
         echo "PASSED - Docker image pull and run Successfully!. You can manually verify it!"
     fi
 _do docker stop ${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}
+_do docker rm ${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}
 echo "================================================="
 
