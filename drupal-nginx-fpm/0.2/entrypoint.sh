@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 set -e
@@ -23,6 +24,7 @@ test -d "${DRUPAL_HOME}/index.html" && rm ${DRUPAL_HOME}/index.html
 echo '<html><head><meta http-equiv="refresh" content="30" /><meta http-equiv="pragma" content="no-cache" /><meta http-equiv="cache-control" content="no-cache" /><title>Installing Drupal</title></head><body>Installing Drupal ... This could be done in minutes. <p>Please refresh your browser and go to  http://[website]/index.php later.</p></body></html>' > ${DRUPAL_HOME}/index.html 
 
 cd $DRUPAL_SOURCE 
+echo "extracing files to $DRUPAL_HOME..."
 tar -xf drupal.tar.gz -C $DRUPAL_HOME/ --strip-components=1 
 chmod a+w "$DRUPAL_HOME/sites/default" 
 mkdir -p "$DRUPAL_HOME/sites/default/files"
