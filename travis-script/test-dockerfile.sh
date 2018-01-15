@@ -39,6 +39,7 @@ _do cd ${DOCKER_IMAGE_NAME}"/"${DOCKER_IMAGE_VERSION}
 test_Dockerfile
 _do cd ..
 _do cd ..
+echo "PASSED - Passed this stage." >> result.log
 echo "================================================="
 
 

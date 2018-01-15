@@ -11,15 +11,13 @@ build_image(){
     echo "${DOCKER_PASSWORD}" | _do docker login -u="${DOCKER_USERNAME}" --password-stdin
     _do cd ${DOCKER_IMAGE_NAME}"/"${DOCKER_IMAGE_VERSION}
     _do docker build -t "${DOCKER_IMAGE_NAME}" .
-    -do cd ..
-    -do cd ..
+    -do cd $TRAVIS_BUILD_DIR    
     testBuildImage=$(docker images | grep "${DOCKER_IMAGE_NAME}")
     if [ -z "${testBuildImage}" ]; then 
         echo "FAILED - Build fail!!!"
         exit 1
     else
-        echo "${testBuildImage}"
-        echo "${testBuildImage}" >> result.log
+        echo "${testBuildImage}"        
         echo "PASSED - Build Successfully!!!."
         echo "PASSED - Build Successfully!!!." >> result.log
     fi
@@ -50,9 +48,8 @@ setTag_push_rm(){
 }
 
 echo "Stage2 - Build Image"
-echo "Stage2 - Build Image" >> result.log
 echo "INFORMATION: Start to Build......"
-echo "INFORMATION: Start to Build......" >> result.log
+echo "INFORMATION: Start to Build......"${DOCKER_IMAGE_NAME}":"$DOCKER_IMAGE_VERSION >> result.log
 build_image
 echo "================================================="
 echo "=================================================" >> result.log
