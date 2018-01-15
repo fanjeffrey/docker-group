@@ -19,7 +19,7 @@ build_image(){
         exit 1
     else
         echo "${testBuildImage}"
-        echo "${testBuildImage}" >> result.log
+        echo "${testBuildImage}"
         echo "PASSED - Build Successfully!!!."
         echo "PASSED - Build Successfully!!!." >> result.log
     fi
@@ -50,9 +50,8 @@ setTag_push_rm(){
 }
 
 echo "Stage2 - Build Image"
-echo "Stage2 - Build Image" >> result.log
 echo "INFORMATION: Start to Build......"
-echo "INFORMATION: Start to Build......" >> result.log
+echo "INFORMATION: Start to Build......"${DOCKER_IMAGE_NAME}":"$DOCKER_IMAGE_VERSION >> result.log
 build_image
 echo "================================================="
 echo "=================================================" >> result.log
