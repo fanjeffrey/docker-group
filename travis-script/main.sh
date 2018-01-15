@@ -238,7 +238,11 @@ echo "dockers: "${dockers}
 if test $[dockers] -eq 0; then
     echo "INFORMATION - This time, doesn't change any files related with docker, no need to verify."
     echo "INFORMATION - This time, doesn't change any files related with docker, no need to verify." >> result.log
-    exit 0;
+    echo "========================================================================================="
+    echo "Result.log:"
+    cat result.log
+    echo "Everything is OK, return 0"
+    exit 0
 fi
 
 show_docker_list
