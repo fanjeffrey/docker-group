@@ -8,12 +8,6 @@ jobs:
   include:
     - stage: check Dockerfile
       script: ./travis-script/main.sh
-notifications:
-  email:
-    recipients:
-      - v-jizh11@microsoft.com
-      - leonzh@wicresoft.com
-    on_success: always
-    on_failure: always
+
     
 
