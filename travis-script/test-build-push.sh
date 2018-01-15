@@ -19,7 +19,9 @@ build_image(){
         exit 1
     else
         echo "${testBuildImage}"
+        echo "${testBuildImage}" >> result.log
         echo "PASSED - Build Successfully!!!."
+        echo "PASSED - Build Successfully!!!." >> result.log
     fi
 }
 
@@ -32,10 +34,13 @@ setTag_push_rm(){
         exit 1
     else
         echo "${testBuildImage}"
+        echo "${testBuildImage}" >> result.log
         echo "PASSED - Set TAG Successfully!."
+        echo "PASSED - Set TAG Successfully!." >> result.log
     fi
     _do docker push "${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}"
     echo "PASSED - Pushed  ${DOCKER_USERNAME}/${DOCKER_IMAGE_NAME}:${TAG} Successfully!."
+    echo "PASSED - Pushed  ${DOCKER_USERNAME}/${DOCKER_IMAGE_NAME}:${TAG} Successfully!." >> result.log
     echo "INFORMATION: Before rmi - docker images"
     _do docker images
     echo "INFORMATION: RM ""${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}"
@@ -45,11 +50,15 @@ setTag_push_rm(){
 }
 
 echo "Stage2 - Build Image"
+echo "Stage2 - Build Image" >> result.log
 echo "INFORMATION: Start to Build......"
+echo "INFORMATION: Start to Build......" >> result.log
 build_image
 echo "================================================="
+echo "=================================================" >> result.log
 
 echo "Stage3 - Set Tag and Push"
+echo "Stage3 - Set Tag and Push" >> result.log
 echo "Build Number: ${TRAVIS_BUILD_NUMBER}"
 echo "TRAVIS_EVENT_TYPE: ${TRAVIS_EVENT_TYPE}"
 echo "TRAVIS_COMMIT_MESSAGE: ${TRAVIS_COMMIT_MESSAGE}"
@@ -90,10 +99,13 @@ testBuildImage=$(docker images | grep "${TAG}")
         exit 1
     else
         echo "$testBuildImage"
+        echo "$testBuildImage" >> result.log
         echo "PASSED - Docker image pull and run Successfully!. You can manually verify it!"
+        echo "PASSED - Docker image pull and run Successfully!. You can manually verify it!" >> result.log
     fi
 _do docker stop testdocker
 _do docker rm testdocker
 _do docker rmi ${DOCKER_USERNAME}"/"${DOCKER_IMAGE_NAME}":"${TAG}
 echo "================================================="
+echo "=================================================" >> result.log
 

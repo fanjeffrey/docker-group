@@ -65,13 +65,16 @@ show_docker_list(){
     echo ""
     echo ""
     echo "======================================================================================"
+    echo "======================================================================================" >> result.log
     echo "INFORMATION - This time, we need to verify below dockers:"
+    echo "INFORMATION - This time, we need to verify below dockers:" >> result.log
     echo " "
     echo " "
     docker_count=1
     while test $[docker_count] -le $[dockers]
     do       
-        echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}       
+        echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}
+        echo ${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]} >> result.log       
         let docker_count+=1
     done
 }
@@ -147,7 +150,9 @@ get_files_from_commit(){
     sed -i 's/ //g' commit_files.txt
     #echo "====================================================================================="
     echo "Below files are changed:"
+    echo "Below files are changed:" >> result.log
     cat commit_files.txt
+    cat commit_files.txt >> result.log
     
     last_docker_image_name="nothing"
     last_docker_image_version="nothing"
@@ -192,9 +197,12 @@ get_files_from_commit(){
 #
 # 
 echo "========================================================================================"
+touch result.log
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
-    echo "INFORMATION - This is a PR, Contains below Commits:"
+    echo "INFORMATION - This is a PUSH/MERGE, Contains below Commits:"
+    echo "INFORMATION - This is a PUSH/MERGE, Contains below Commits:" >> result.log
     echo $TRAVIS_COMMIT
+    echo $TRAVIS_COMMIT >> result.log
     commit_sha=$TRAVIS_COMMIT    
     get_files_from_commit
 	merge_to_docker_list
@@ -207,7 +215,9 @@ else
     cat TEMP.txt | grep sha > PR_SHAs.txt
     rm TEMP.txt
     echo "INFORMATION - This is a PR, Contains below Commits:"
+    echo "INFORMATION - This is a PR, Contains below Commits:" >> result.log
     cat PR_SHAs.txt
+    cat PR_SHAs.txt >> result.log
     line_count_sha=1
     lines_sha=$(wc -l PR_SHAs.txt)
     lines_sha=${lines_sha%%' '*}
@@ -226,13 +236,16 @@ fi
 
 echo "dockers: "${dockers}
 if test $[dockers] -eq 0; then
-    echo "This time, doesn't change any files related with docker, no need to verify."
+    echo "INFORMATION - This time, doesn't change any files related with docker, no need to verify."
+    echo "INFORMATION - This time, doesn't change any files related with docker, no need to verify." >> result.log
     exit 0;
 fi
 
 show_docker_list
 echo "======================================================================================"
+echo "======================================================================================" >> result.log
 echo "INFORMATION - Start to Verify Docker files:"
+echo "INFORMATION - Start to Verify Docker files:" >> result.log
 # Verify Docker files.
 docker_count=1
 while [ $docker_count -le $dockers ]
@@ -242,7 +255,9 @@ do
 	#Is this commit remove a Image/Version? If yes, we can skip this step.
     if test ! -d $docker_folder; then
         echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !"
+        echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !" >> result.log
         echo "INFORMATION: SKIP this stage"
+        echo "INFORMATION: SKIP this stage" >> result.log
     else
         blank_count=0
         blank_count=$(echo ${docker_folder} | grep -o ' ' | wc -l)    
@@ -264,6 +279,8 @@ echo ""
 echo ""
 echo "======================================================================================"
 echo "INFORMATION - Start to Build/PUSH:"
+echo "======================================================================================" >> result.log
+echo "INFORMATION - Start to Build/PUSH:" >> result.log
 # Verify Docker files.
 docker_count=1
 while test $[docker_count] -le $[dockers]
@@ -273,13 +290,15 @@ do
     #Is this commit remove a Image/Version? If yes, we can skip this step.
     if test ! -d $docker_folder; then
         echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !"
+        echo "INFORMATION: This commit Remove "${docker_image_name["${docker_count}"]}"/"${docker_image_version["${docker_count}"]}" !" >> result.log
         echo "INFORMATION: SKIP this stage"
+        echo "INFORMATION: SKIP this stage" >> result.log
     else      
         #It's not necessay to verify folder here, if anything wrong, the process should has been broken in last stage.
         ./travis-script/test-build-push.sh ${docker_image_name["${docker_count}"]} ${docker_image_version["${docker_count}"]}
 		test_result=$?		
 		if ((test_result!=0)); then
-			echo "ERROR - Please double check......"
+			echo "ERROR - Please double check......"            
 			exit -1
 		fi
     fi
@@ -288,5 +307,7 @@ done
 
 # Everything is OK, return 0
 echo "========================================================================================="
+echo "Result.log:"
+cat result.log
 echo "Everything is OK, return 0"
 exit 0
