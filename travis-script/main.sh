@@ -197,6 +197,8 @@ get_files_from_commit(){
 #
 # 
 echo "========================================================================================"
+echo "Working Path: "
+pwd
 touch result.log
 if [ "$TRAVIS_EVENT_TYPE" == "push" ]; then
     echo "INFORMATION - This is a PUSH/MERGE, Contains below Commits:"
