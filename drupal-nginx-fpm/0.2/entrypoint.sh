@@ -24,6 +24,7 @@ echo '<html><head><meta http-equiv="refresh" content="30" /><meta http-equiv="pr
 
 cd $DRUPAL_SOURCE 
 tar -xf drupal.tar.gz -C $DRUPAL_HOME/ --strip-components=1 
+echo "Extracting drupal.tar.gz ... done."
 chmod a+w "$DRUPAL_HOME/sites/default" 
 mkdir -p "$DRUPAL_HOME/sites/default/files"
 chmod a+w "$DRUPAL_HOME/sites/default/files"
